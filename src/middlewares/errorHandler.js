@@ -1,12 +1,9 @@
+// src/middlewares/errorHandler.js
 export const errorHandler = (err, req, res, next) => {
-  console.error(err); // server console me error log
-
+  console.error(err.stack); // Logger: stack trace
   const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-
   res.status(statusCode).json({
     success: false,
-    message,
-    result: null,
+    message: err.message || "Internal Server Error",
   });
 };
