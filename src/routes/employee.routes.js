@@ -1,14 +1,23 @@
-// src/routes/employee.routes.js
 import express from "express";
 import * as employeeController from "../modules/employee/employee.controller.js";
+import { adminAuthMiddleware } from "../middlewares/adminauth.middleware.js";
+import { verifyToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/", employeeController.createEmployee);
+// Create employee
+router.post("/", adminAuthMiddleware, employeeController.createEmployee);
 
-router.get("/", employeeController.getAllEmployees);
-router.get("/:id", employeeController.getEmployeeById);
-router.put("/:id", employeeController.updateEmployee);
-router.delete("/:id", employeeController.deleteEmployee);
+// Update employee
+router.put("/:id", adminAuthMiddleware, employeeController.updateEmployee);
+
+// Delete employee
+router.delete("/:id", adminAuthMiddleware, employeeController.deleteEmployee);
+
+// Get all employees
+router.get("/", verifyToken, employeeController.getAllEmployees);
+
+// Get employee by ID
+router.get("/:id", verifyToken, employeeController.getEmployeeById);
 
 export default router;
