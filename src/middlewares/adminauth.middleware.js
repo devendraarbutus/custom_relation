@@ -20,7 +20,7 @@ const adminauthenticateJWT = (req, res, next) => {
 };
 const adminVerification = (req, res, next) => {
     try {
-        if (req.admin.role !== 'admin'|| req.admin.role !== 'superadmin'|| req.admin.role !== 'subadmin') {
+        if (req.admin.role === 'employee') {
             return res.status(403).json({ message: 'Access denied. Admins only.' });
         };
 

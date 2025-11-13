@@ -31,5 +31,26 @@ export default {
     } catch (err) {
       next(err);
     }
-  }
+  },
+  getAdmins: async (req, res, next) => {
+    try {
+      const role = req.admin.role;
+
+      let roleFilter = [];
+      if (role === 'superadmin') {
+        // Superadmin can see all admins and subadmins
+        roleFilter = ['admin', 'subadmin'];
+      } else if (role === 'admin') {
+        // Admin can only see subadmins
+        roleFilter = ['subadmin'];
+      } else {
+        return next({ statusCode: 403, message: 'Access denied. Because only admin , superadmin can do' });
+      }
+
+      const admins = await adminService.getAdminsService(roleFilter);
+      sendResponse(res, 200, 'Admins fetched successfully', admins);
+    } catch (err) {
+      next(err);
+    }
+  },
 }

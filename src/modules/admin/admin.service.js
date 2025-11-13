@@ -83,4 +83,10 @@ export default {
       token,
     };
 },
+  getAdminsService: async (roleFilter) => {
+    // If roleFilter is provided, filter by role
+    const query = roleFilter ? { role: { $in: roleFilter } } : {};
+    const admins = await Admin.find(query).select('-password'); // exclude passwords
+    return admins;
+  },
 }
