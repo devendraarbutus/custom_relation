@@ -1,10 +1,9 @@
 import Joi from 'joi';
 
 export const adminSignupValidation = Joi.object({
-  adminName: Joi.string().min(3).max(30).required().messages({
-    'string.empty': 'Admin name is required',
-    'string.min': 'Admin name must be at least 3 characters',
-    'string.max': 'Admin name must be at most 30 characters',
+  adminName: Joi.string().min(3).required().messages({
+    'string.empty': ' name is required',
+    'string.min': ' name should have a minimum length of 3',
   }),
   email: Joi.string().email().required().messages({
     'string.empty': 'Email is required',
@@ -24,9 +23,6 @@ export const adminSignupValidation = Joi.object({
 export const adminLoginValidationSchema = Joi.object({
   email: Joi.string().email().optional().messages({
     "string.email": "Please enter a valid email address",
-  }),
-  adminName: Joi.string().optional().messages({
-    "string.empty": "Admin name cannot be empty",
   }),
   password: Joi.string()
     .trim()

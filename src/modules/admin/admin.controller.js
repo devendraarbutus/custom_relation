@@ -1,12 +1,8 @@
-import { adminService } from "./admin.service.js";
-import {
-  adminSignupValidation,
-  adminLoginValidationSchema,
-} from "../../validation/admin.validation.js";
-import { sendResponse } from "../../utils/response.js";
+import adminService from './admin.service.js';
+import { adminSignupValidation, adminLoginValidationSchema } from '../../validation/admin.validation.js';
+import { sendResponse } from '../../utils/response.js';
 
-export const adminController = {
- 
+export default {
   adminSignup: async (req, res, next) => {
     try {
       const { error } = adminSignupValidation.validate(req.body);
@@ -14,10 +10,10 @@ export const adminController = {
         return next({ statusCode: 400, message: error.details[0].message });
       }
 
-      const admin = await adminService.adminSignupService(req.body);
-      sendResponse(res, 201, "Admin created successfully", admin);
+      const result = await adminService.adminSignupService(req.body);
+      sendResponse(res, 201, "Admin created successfully", result);
+
     } catch (err) {
-      console.error("Admin signup error:", err.message);
       next(err);
     }
   },
@@ -29,15 +25,39 @@ export const adminController = {
         return next({ statusCode: 400, message: error.details[0].message });
       }
 
-      const { adminName, email, password } = req.body;
-      const identifier = adminName || email;
+      const { email, password } = req.body;
+      const result = await adminService.adminLoginService(email, password);
 
-      const loginResult = await adminService.adminLoginService(identifier, password);
-
-      sendResponse(res, 200, "Login successful", loginResult);
+      sendResponse(res, 200, "Login successful", result);
     } catch (err) {
-      console.error("Admin login error:", err.message);
       next(err);
     }
   },
-};
+
+  getAdmins: async (req, res, next) => {
+    try {
+      let { page = 1, limit = 10, search = "" } = req.query;
+      page = Number(page);
+      limit = Number(limit);
+
+      const role = req.admin.role;
+
+      // Filter allowed data
+      let roleFilter = [];
+      if (role === "superadmin") roleFilter = ["admin", "subadmin", "superadmin"];
+      else if (role === "admin") roleFilter = ["subadmin"];
+      else roleFilter = []; // subadmin cannot view list
+
+      const result = await adminService.getAdminsService({
+        roleFilter,
+        page,
+        limit,
+        search
+      });
+
+      sendResponse(res, 200, "Admins fetched successfully", result);
+    } catch (err) {
+      next(err);
+    }
+  },
+}

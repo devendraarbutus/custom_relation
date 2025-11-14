@@ -1,13 +1,8 @@
-class ApiResponse {
-  constructor(statusCode, message, result = null) {
-    this.success = true;
-    this.statusCode = statusCode;
-    this.message = message;
-    if (result) this.result = result;
-  }
-}
-
-// Success response
-export const sendResponse = (res, statusCode, message, result = null) => {
-  return res.status(statusCode).json(new ApiResponse(statusCode, message, result));
+export const sendResponse = (res, statusCode, message, data = {}) => {
+    return res.status(statusCode).json({
+        success: true,
+        statusCode,
+        message,
+        result: data
+    });
 };

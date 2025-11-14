@@ -5,27 +5,15 @@ import "dotenv/config";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-export const adminService = {
+export default {
   adminSignupService: async (data) => {
-    const { adminName, email, password, role = "admin" } = data;
-    if (!adminName || !email || !password) {
-      const error = new Error("All fields (adminName, email, password) are required");
-      error.statusCode = 400;
-      throw error;
-    }
+    const { adminName, email, password, role } = data;
 
-    const existingAdmin = await Admin.findOne({
-      $or: [{ adminName }, { email }],
-    });
+    // Duplicate check
+    const existingAdmin = await Admin.findOne({ email });
 
     if (existingAdmin) {
-      let message = "";
-      if (existingAdmin.adminName === adminName)
-        message = "Admin name already exists, please choose another one";
-      else if (existingAdmin.email === email)
-        message = "Email already exists, please use another email";
-
-      const error = new Error(message);
+      const error = new Error("Admin  email already exists");
       error.statusCode = 400;
       throw error;
     }
@@ -36,45 +24,72 @@ export const adminService = {
       adminName,
       email,
       password: hashedPassword,
-      role,
+      role
     });
 
     return {
       id: admin._id,
       adminName: admin.adminName,
       email: admin.email,
-      role: admin.role,
+      role: admin.role
     };
   },
 
-  adminLoginService: async (identifier, password) => {
-    const admin = await Admin.findOne({
-      $or: [{ adminName: identifier }, { email: identifier }],
-    });
+
+  adminLoginService: async (email, password) => {
+    const admin = await Admin.findOne({ email });
 
     if (!admin) {
-      const error = new Error("Invalid admin name or email");
+      const error = new Error("Invalid email or password");
       error.statusCode = 400;
       throw error;
     }
 
-    const isMatch = await bcrypt.compare(password.trim(), admin.password);
+    const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-      const error = new Error("Invalid password");
+      const error = new Error("Invalid email or password");
       error.statusCode = 400;
       throw error;
     }
 
-    const token = jwt.sign({ id: admin._id, role: admin.role }, JWT_SECRET, {
-      expiresIn: "12h",
-    });
+    const token = jwt.sign(
+      {
+        id: admin._id,
+        role: admin.role
+      },
+      JWT_SECRET,
+      { expiresIn: "12h" }
+    );
+
+    return { token };
+  },
+
+
+  getAdminsService: async ({ roleFilter, page, limit, search }) => {
+    const query = {
+      role: { $in: roleFilter },
+      $or: [
+        { adminName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ]
+    };
+
+    const skip = (page - 1) * limit;
+
+    const admins = await Admin.find(query)
+      .select("-password")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await Admin.countDocuments(query);
 
     return {
-      id: admin._id,
-      adminName: admin.adminName,
-      email: admin.email,
-      role: admin.role,
-      token,
+      total,
+      page,
+      limit,
+      admins,
+      totalPages: Math.ceil(total / limit)
     };
-  },
+  }
 };
