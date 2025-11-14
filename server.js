@@ -4,7 +4,13 @@ import cors from "cors";
 import connectDB from "./src/config/db.js";
 import adminRouter from "./src/routes/admin.routes.js";
 import { errorHandler } from "./src/middlewares/errorHandler.js";
-import employeeRouter from "./src/routes/employee.routes.js";
+import adminRouter from "./src/routes/admin.routes.js";
+import employeeRoutes from "./src/routes/employee.routes.js";
+import taskRoutes from "./src/routes/task.routes.js";
+import workLogRoutes from "./src/routes/worklog.routes.js";
+
+dotenv.config();
+
 const app = express();
 connectDB();
 
@@ -13,18 +19,37 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+if (process.env.NODE_ENV !== "production") app.use(morgan("dev"));
 
-// API ROUTES
-app.use("/api/admin", adminRouter);
-app.use("/api/employee", employeeRouter);
+const startServer = async () => {
+  try {
+    await connectDB();
+    console.log("MongoDB connected successfully");
 
-// Root Route
-app.get("/", (req, res) => {
-  res.send("CRM Backend Server is Running!");
-});
+    app.use("/api/admin", adminRouter);
+    app.use("/api/employees", employeeRoutes);
+    app.use("/api/tasks", taskRoutes);
+    app.use("/api/worklogs", workLogRoutes);
 
-// Error Handler (must be after routes)
-app.use(errorHandler);
+    app.get("/", (req, res) =>
+      res.status(200).json({ success: true, message: "CRM Backend Server Running" })
+    );
+    app.get("/", (req, res) => {
+      res.status(200).json({
+        success: true,
+        message: "CRM Backend Server Running Successfully",
+      });
+    });
+    
+
+    app.use((req, res) => {
+      res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.originalUrl}`,
+      });
+    });
+
+    app.use(errorHandler);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

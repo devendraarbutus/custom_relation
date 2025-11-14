@@ -105,3 +105,5 @@ export default {
   }
     }
 };
+
+export default employeeController;

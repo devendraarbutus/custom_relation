@@ -1,76 +1,101 @@
 import WorkLog from "../../models/worklog.model.js";
 
-export const startWork = async (employeeId, taskId) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+// Start a timer: push a new object into timer array
+const startTimer = async (employeeId, taskId) => {
+  let log = await WorkLog.findOne({ employeeId, taskId });
 
-  const existingLog = await WorkLog.findOne({
-    employeeId,
-    taskId,
-    date: today,
-    status: "in-progress"
-  });
+  if (!log) {
+    log = new WorkLog({ employeeId, taskId, timer: [] });
+  }
 
-  if (existingLog) throw Object.assign(new Error("Work session already in progress for this task today"), { statusCode: 400 });
+  const runningTimer = log.timer.find(t => !t.endTime);
+  if (runningTimer) {
+    return { success: false, message: "Timer already running for this task" };
+  }
 
-  return await WorkLog.create({
-    employeeId,
-    taskId,
-    startTime: new Date(),
-    date: today,
-    status: "in-progress"
-  });
+  log.timer.push({ startTime: new Date() });
+  await log.save();
+  return { success: true, message: "Timer started" };
 };
 
-export const addBreak = async (workLogId, breakData) => {
-  const workLog = await WorkLog.findById(workLogId);
-  if (!workLog) throw Object.assign(new Error("Work log not found"), { statusCode: 404 });
+// Stop a timer: update the endTime of the last running timer
+const stopTimer = async (employeeId, taskId) => {
+  const log = await WorkLog.findOne({ employeeId, taskId });
+  if (!log) return { success: false, message: "No log found for this task" };
 
-  workLog.breaks.push(breakData);
-  await workLog.save();
-  return workLog;
+  const runningTimer = log.timer.find(t => !t.endTime);
+  if (!runningTimer) return { success: false, message: "No running timer found" };
+
+  runningTimer.endTime = new Date();
+  await log.save();
+  return { success: true, message: "Timer stopped" };
 };
 
-export const endWork = async (workLogId) => {
-  const workLog = await WorkLog.findById(workLogId);
-  if (!workLog) throw Object.assign(new Error("Work log not found"), { statusCode: 404 });
-  if (workLog.status === "completed") throw Object.assign(new Error("Work session already completed"), { statusCode: 400 });
+// Add notes to the last timer entry
+const addNotes = async (employeeId, taskId, notes) => {
+  const log = await WorkLog.findOne({ employeeId, taskId });
+  if (!log) return { success: false, message: "No log found for this task" };
 
-  workLog.endTime = new Date();
+  const lastTimer = log.timer[log.timer.length - 1];
+  if (!lastTimer) return { success: false, message: "No timer to add notes" };
 
-  const workedMs = workLog.endTime - workLog.startTime;
-  const breakMs = workLog.breaks.reduce((sum, b) => sum + (new Date(b.end) - new Date(b.start)), 0);
-
-  workLog.totalWorkedTime = parseFloat(((workedMs - breakMs) / 1000 / 60 / 60).toFixed(2));
-  workLog.status = "completed";
-
-  await workLog.save();
-  return workLog;
+  lastTimer.notes = notes;
+  await log.save();
+  return { success: true, message: "Notes added" };
 };
 
-export const addNote = async (workLogId, noteData) => {
-  const workLog = await WorkLog.findById(workLogId);
-  if (!workLog) throw Object.assign(new Error("Work log not found"), { statusCode: 404 });
+// Unified handler
+const handleTimer = async (req, res) => {
+  try {
+    const { employeeId, taskId, action, notes } = req.body;
 
-  workLog.notes.push(noteData);
-  await workLog.save();
-  return workLog;
+    if (!employeeId || !taskId || !action) {
+      return res.status(400).json({ success: false, message: "employeeId, taskId and action are required" });
+    }
+
+    let response;
+    if (action === "start") response = await startTimer(employeeId, taskId);
+    else if (action === "stop") response = await stopTimer(employeeId, taskId);
+    else return res.status(400).json({ success: false, message: "Invalid action" });
+
+    if (notes && response.success) {
+      await addNotes(employeeId, taskId, notes);
+      response.message += " and notes added";
+    }
+
+    return res.status(response.success ? 200 : 400).json(response);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };
 
-export const getWorkLogsByEmployee = async (employeeId, startDate, endDate) => {
-  return await WorkLog.find({
-    employeeId,
-    date: { $gte: startDate, $lte: endDate }
-  })
-  .populate("taskId", "title")
-  .sort({ date: -1 });
+// Get all logs by employee
+const getEmployeeLogs = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const logs = await WorkLog.find({ employeeId });
+    return res.status(200).json({ success: true, data: logs });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };
 
-export const getAllWorkLogs = async (startDate, endDate) => {
-  return await WorkLog.find({
-    date: { $gte: startDate, $lte: endDate }
-  })
-  .populate("employeeId", "name email")
-  .populate("taskId", "title")
-  .sort({ date: -1 });
+// Get all logs by task
+const getTaskLogs = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const logs = await WorkLog.find({ taskId });
+    return res.status(200).json({ success: true, data: logs });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export default {
+  handleTimer,
+  getEmployeeLogs,
+  getTaskLogs,
+  startTimer,
+  stopTimer,
+  addNotes
 };

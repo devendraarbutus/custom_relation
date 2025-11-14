@@ -18,7 +18,6 @@ export default {
       throw error;
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password.trim(), 10);
 
     const admin = await Admin.create({
