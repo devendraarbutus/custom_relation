@@ -32,6 +32,20 @@ const startServer = async () => {
     app.get("/", (req, res) =>
       res.status(200).json({ success: true, message: "CRM Backend Server Running" })
     );
+    app.get("/", (req, res) => {
+      res.status(200).json({
+        success: true,
+        message: "CRM Backend Server Running Successfully",
+      });
+    });
+    
+
+    app.use((req, res) => {
+      res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.originalUrl}`,
+      });
+    });
 
     app.use(errorHandler);
 
