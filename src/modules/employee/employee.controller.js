@@ -1,102 +1,109 @@
-import employeeService from "../employee/employee.service.js";
-import {
-  employeeValidation,
-  employeeUpdateValidation,
-  employeeLoginValidationSchema,
-} from "../../validation/employee.validation.js";
+import employeeService from "./employee.service.js";
+import { createEmployeeValidation, updateEmployeeValidation, employeeLoginValidation } from "../../validation/employee.validation.js";
 import { sendResponse } from "../../utils/response.js";
+export default {
 
-const employeeController = {
-  createEmployee: async (req, res, next) => {
-    try {
-      const adminId = req.user?.id;
-      const adminRole = req.user?.role;
-      if (!["admin", "superadmin", "subadmin"].includes(adminRole)) {
-        return next({ statusCode: 403, message: "Access denied" });
-      }
+    createEmployee: async (req, res, next) => {
+        try {
+            const { error } = createEmployeeValidation.validate(req.body);
+            if (error) return next(error);
 
-      const { error } = employeeValidation.validate(req.body);
-      if (error) return next({ statusCode: 400, message: error.details[0].message });
+            const data = {
+                ...req.body,
+                createdBy: req.admin.id
+            };
 
-      const employeeData = { ...req.body, createdBy: adminId };
-      const employee = await employeeService.createEmployeeService(employeeData);
-      sendResponse(res, 201, "Employee created successfully", employee);
-    } catch (err) {
-      next(err);
+            const result = await employeeService.createEmployeeService(data, req.admin.role);
+
+            res.status(201).json({
+                success: true,
+                message: "Employee created successfully & email sent",
+                result
+            });
+        } catch (err) {
+            next(err);
+        }
+    },
+
+    getEmployees: async (req, res, next) => {
+        try {
+            const page = Number(req.query.page) || 1;
+            const limit = Number(req.query.limit) || 10;
+            const search = req.query.search || "";
+
+            const result = await employeeService.getEmployeesService({
+                page,
+                limit,
+                search
+            });
+
+            res.status(200).json({
+                success: true,
+                message: "Employees fetched successfully",
+                result
+            });
+        } catch (err) { next(err); }
+    },
+
+    getEmployeeById: async (req, res, next) => {
+        try {
+            const result = await employeeService.getEmployeeByIdService(req.params.id);
+            res.status(200).json({
+                success: true,
+                message: "Employee fetched",
+                result
+            });
+        } catch (err) { next(err); }
+    },
+
+    updateEmployee: async (req, res, next) => {
+        try {
+            const { error } = updateEmployeeValidation.validate(req.body);
+            if (error) return next(error);
+
+            const result = await employeeService.updateEmployeeService(
+                req.params.id,
+                req.body,
+                req.admin.role
+            );
+
+            res.status(200).json({
+                success: true,
+                message: "Employee updated successfully",
+                result
+            });
+        } catch (err) { next(err); }
+    },
+
+    deleteEmployee: async (req, res, next) => {
+        try {
+            const result = await employeeService.deleteEmployeeService(
+                req.params.id,
+                req.admin.role
+            );
+
+            res.status(200).json({
+                success: true,
+                message: "Employee deleted successfully",
+                result
+            });
+        } catch (err) { next(err); }
+    },
+    employeeLogin: async (req, res, next) => {
+        try {
+            const { error } = employeeLoginValidation.validate(req.body);
+            if (error) {
+                return next({ statusCode: 400, message: error.details[0].message });
+            }
+
+            const { email, password } = req.body;
+            const result = await employeeService.employeeLoginService(email, password);
+
+            sendResponse(res, 200, "Login successful", result);
+        } catch (err) {
+            next(err);
+        }
     }
-  },
-
-  updateEmployee: async (req, res, next) => {
-    try {
-      const adminRole = req.user?.role;
-      if (!["admin", "superadmin", "subadmin"].includes(adminRole)) {
-        return next({ statusCode: 403, message: "Access denied" });
-      }
-
-      const { error } = employeeUpdateValidation.validate(req.body);
-      if (error) return next({ statusCode: 400, message: error.details[0].message });
-
-      const updatedEmployee = await employeeService.updateEmployeeService(req.params.id, req.body);
-      sendResponse(res, 200, "Employee updated successfully", updatedEmployee);
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  deleteEmployee: async (req, res, next) => {
-    try {
-      const adminRole = req.user?.role;
-      if (adminRole !== "superadmin") {
-        return next({ statusCode: 403, message: "Access denied" });
-      }
-
-      await employeeService.deleteEmployeeService(req.params.id);
-      sendResponse(res, 200, "Employee deleted successfully");
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  getAllEmployees: async (req, res, next) => {
-    try {
-      const adminRole = req.user?.role;
-      if (!["admin", "superadmin"].includes(adminRole)) {
-        return next({ statusCode: 403, message: "Access denied" });
-      }
-
-      const employees = await employeeService.getAllEmployeesService();
-      sendResponse(res, 200, "Employees fetched successfully", employees);
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  getEmployeeById: async (req, res, next) => {
-    try {
-      const adminRole = req.user?.role;
-      if (!["admin", "superadmin"].includes(adminRole)) {
-        return next({ statusCode: 403, message: "Access denied" });
-      }
-
-      const employee = await employeeService.getEmployeeByIdService(req.params.id);
-      sendResponse(res, 200, "Employee fetched successfully", employee);
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  employeeLogin: async (req, res, next) => {
-    try {
-      const { error } = employeeLoginValidationSchema.validate(req.body);
-      if (error) return next({ statusCode: 400, message: error.details[0].message });
-
-      const { email, password } = req.body;
-      const result = await employeeService.employeeLoginService(email, password);
-      sendResponse(res, 200, "Login successful", result);
-    } catch (err) {
-      next(err);
-    }
-  },
 };
 
-export default employeeController;
+

@@ -1,16 +1,12 @@
 import express from "express";
-import { adminController } from "../modules/admin/admin.controller.js";
-import { verifyAdmin } from "../middlewares/auth.middleware.js";
+import adminController from "../modules/admin/admin.controller.js";
+import { adminauthenticateJWT, adminVerification } from "../middlewares/adminauth.middleware.js";
+const adminRouter = express.Router();
 
-const router = express.Router();
+adminRouter.post("/signup", adminController.adminSignup);
+adminRouter.post("/login", adminController.adminLogin);
+adminRouter.get("/list", adminauthenticateJWT, adminVerification, adminController.getAdmins);
 
-// Admin signup
-router.post("/signup", adminController.adminSignup);
 
-// Admin login
-router.post("/login", adminController.adminLogin);
+export default adminRouter;
 
-// Example protected route
-// router.get("/profile", verifyAdmin, adminController.getProfile);
-
-export default router;
