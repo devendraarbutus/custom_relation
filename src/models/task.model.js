@@ -14,7 +14,7 @@ const taskSchema = new mongoose.Schema(
     },
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
+      ref: "employee",
       required: true
     },
     createdBy: {
@@ -24,7 +24,7 @@ const taskSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "in-progress", "completed", "overdue"],
+      enum: ["pending", "inprogress", "completed", "overdue"],
       default: "pending"
     },
     dueDate: {
@@ -36,3 +36,9 @@ const taskSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("Task", taskSchema);
+
+
+
+
+
+
