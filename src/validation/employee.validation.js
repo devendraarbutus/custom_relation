@@ -68,6 +68,7 @@ export const employeeLoginValidation = joi.object({
     "string.min": "Password must be at least 6 characters",
   }),
 });
+
 import Joi from 'joi';
 
 export const employeeValidation = Joi.object({

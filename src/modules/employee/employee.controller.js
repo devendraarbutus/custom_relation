@@ -1,5 +1,5 @@
 import employeeService from "./employee.service.js";
-import {createEmployeeValidation,updateEmployeeValidation,employeeLoginValidation} from "../../validation/employee.validation.js";
+import { createEmployeeValidation, updateEmployeeValidation, employeeLoginValidation } from "../../validation/employee.validation.js";
 import { sendResponse } from "../../utils/response.js";
 export default {
 
@@ -90,20 +90,20 @@ export default {
         } catch (err) { next(err); }
     },
     employeeLogin: async (req, res, next) => {
-      try {
-    const { error } = employeeLoginValidation.validate(req.body);
-    if (error) {
-      return next({ statusCode: 400, message: error.details[0].message });
-    }
+        try {
+            const { error } = employeeLoginValidation.validate(req.body);
+            if (error) {
+                return next({ statusCode: 400, message: error.details[0].message });
+            }
 
-    const { email, password } = req.body;
-    const result = await employeeService.employeeLoginService(email, password);
+            const { email, password } = req.body;
+            const result = await employeeService.employeeLoginService(email, password);
 
-    sendResponse(res, 200, "Login successful", result);
-  } catch (err) {
-    next(err);
-  }
+            sendResponse(res, 200, "Login successful", result);
+        } catch (err) {
+            next(err);
+        }
     }
 };
 
-export default employeeController;
+
