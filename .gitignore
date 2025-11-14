@@ -1,21 +1,24 @@
 # Node modules
 node_modules/
 
-# Environment variables
+# Environment files
 .env
+.env.*
 
 # Logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# Optional: VS Code workspace settings
+# IDE files
 .vscode/
+.DS_Store
+
+# Build / cache
+dist/
+.cache/
+.parcel-cache/
 
 .package.json
 .package-lock.json
