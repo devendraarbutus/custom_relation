@@ -1,19 +1,16 @@
 import express from "express";
-import adminController from "../modules/admin/admin.controller.js";
+import { adminController } from "../modules/admin/admin.controller.js";
+import { verifyAdmin } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-/**
- * 🧩 ADMIN ROUTES
- * Base path: /api/admin
- *
- * Public Routes:
- *  - POST /signup → Create new admin
- *  - POST /login  → Admin login
- */
+// Admin signup
+router.post("/signup", adminController.adminSignup);
 
-// Admin Authentication Routes
-router.post("/signup", (req, res, next) => adminController.adminSignup(req, res, next));
-router.post("/login", (req, res, next) => adminController.adminLogin(req, res, next));
+// Admin login
+router.post("/login", adminController.adminLogin);
+
+// Example protected route
+// router.get("/profile", verifyAdmin, adminController.getProfile);
 
 export default router;

@@ -4,10 +4,10 @@ import cors from "cors";
 import morgan from "morgan";
 import connectDB from "./src/config/db.js";
 import { errorHandler } from "./src/middlewares/errorHandler.js";
-import adminRoutes from "./src/routes/admin.routes.js";
+import adminRouter from "./src/routes/admin.routes.js";
 import employeeRoutes from "./src/routes/employee.routes.js";
 import taskRoutes from "./src/routes/task.routes.js";
-import worklogRoutes from "./src/routes/worklog.routes.js";
+import workLogRoutes from "./src/routes/worklog.routes.js";
 
 dotenv.config();
 
@@ -24,11 +24,14 @@ const startServer = async () => {
     await connectDB();
     console.log("MongoDB connected successfully");
 
-    app.use("/api/admin", adminRoutes);
+    app.use("/api/admin", adminRouter);
     app.use("/api/employees", employeeRoutes);
     app.use("/api/tasks", taskRoutes);
-    app.use("/api/worklogs", worklogRoutes);
+    app.use("/api/worklogs", workLogRoutes);
 
+    app.get("/", (req, res) =>
+      res.status(200).json({ success: true, message: "CRM Backend Server Running" })
+    );
     app.get("/", (req, res) => {
       res.status(200).json({
         success: true,

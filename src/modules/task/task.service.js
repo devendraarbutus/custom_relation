@@ -1,88 +1,107 @@
 import Task from "../../models/task.model.js";
 import Employee from "../../models/employee.model.js";
 
-export const createTask = async (adminId, data) => {
-  const { title, description, assignedTo, dueDate } = data;
-  if (!title || !description || !assignedTo || !dueDate) {
-    const error = new Error("All fields are required");
-    error.statusCode = 400;
-    throw error;
-  }
+// Create a task
+export const createTask = async (adminId, data, res) => {
+  try {
+    const { title, description, assignedTo, dueDate } = data;
+    if (!title || !description || !assignedTo || !dueDate) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
 
-  const employee = await Employee.findById(assignedTo);
-  if (!employee || employee.status !== "active") {
-    const error = new Error("Invalid or inactive employee");
-    error.statusCode = 400;
-    throw error;
-  }
+    const employee = await Employee.findById(assignedTo);
+    if (!employee || employee.status !== "active") {
+      return res.status(400).json({ success: false, message: "Invalid or inactive employee" });
+    }
 
-  return await Task.create({ title, description, assignedTo, createdBy: adminId, dueDate });
+    const task = await Task.create({ title, description, assignedTo, createdBy: adminId, dueDate });
+    return res.status(201).json({ success: true, message: "Task created successfully", task });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
 };
 
-export const getAllTasks = async ({ page = 1, limit = 10, search = "", sort = { createdAt: -1 } } = {}) => {
-  const query = {
-    $or: [
-      { title: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } },
-    ],
-  };
+// Get all tasks
+export const getAllTasks = async (queryParams, res) => {
+  try {
+    const page = parseInt(queryParams.page) || 1;
+    const limit = parseInt(queryParams.limit) || 10;
+    const search = queryParams.search || "";
+    const sortField = queryParams.sortBy || "createdAt";
+    const sortOrder = queryParams.order === "asc" ? 1 : -1;
 
-  const tasks = await Task.find(query)
-    .populate("assignedTo", "name email")
-    .populate("createdBy", "adminName email")
-    .sort(sort)
-    .skip((page - 1) * limit)
-    .limit(limit);
+    const query = {
+      $or: [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ],
+    };
 
-  return tasks;
+    const tasks = await Task.find(query)
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "adminName email")
+      .sort({ [sortField]: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return res.status(200).json({
+      success: true,
+      page,
+      limit,
+      count: tasks.length,
+      tasks,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
 };
 
-export const getTaskById = async (id) => {
-  const task = await Task.findById(id)
-    .populate("assignedTo", "name email")
-    .populate("createdBy", "adminName email");
+// Get task by ID
+export const getTaskById = async (id, res) => {
+  try {
+    const task = await Task.findById(id)
+      .populate("assignedTo", "name email")
+      .populate("createdBy", "adminName email");
 
-  if (!task) {
-    const error = new Error("Task not found");
-    error.statusCode = 404;
-    throw error;
+    if (!task) return res.status(404).json({ success: false, message: "Task not found" });
+
+    return res.status(200).json({ success: true, task });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
   }
-
-  return task;
 };
 
-export const updateTaskStatus = async (id, status) => {
-  if (!status) {
-    const error = new Error("Status is required");
-    error.statusCode = 400;
-    throw error;
-  }
+// Update task status
+export const updateTaskStatus = async (id, status, res) => {
+  try {
+    const allowedStatus = ["pending", "in-progress", "completed", "overdue"];
+    if (!status || !allowedStatus.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
 
-  const allowedStatus = ["pending", "in-progress", "completed", "overdue"];
-  if (!allowedStatus.includes(status)) {
-    const error = new Error("Invalid status value");
-    error.statusCode = 400;
-    throw error;
-  }
+    const task = await Task.findByIdAndUpdate(
+      id,
+      { status, updatedAt: new Date() },
+      { new: true }
+    );
 
-  const task = await Task.findByIdAndUpdate(id, { status, updatedAt: new Date() }, { new: true });
-  if (!task) {
-    const error = new Error("Task not found");
-    error.statusCode = 404;
-    throw error;
-  }
+    if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
-  return task;
+    return res.status(200).json({ success: true, message: "Status updated", task });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
 };
 
-export const deleteTask = async (id) => {
-  const task = await Task.findById(id);
-  if (!task) {
-    const error = new Error("Task not found");
-    error.statusCode = 404;
-    throw error;
-  }
+// Delete a task
+export const deleteTask = async (id, res) => {
+  try {
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
-  await task.deleteOne();
-  return true;
+    await task.deleteOne();
+    return res.status(200).json({ success: true, message: "Task deleted successfully" });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message });
+  }
 };

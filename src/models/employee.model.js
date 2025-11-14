@@ -1,17 +1,17 @@
-// src/models/employee.model.js
 import mongoose from "mongoose";
 
 const employeeSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    employeeName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // for employee login
-    mobile: { type: String }, // optional mobile number
+    password: { type: String, required: true, select: false }, // keep password
     role: { type: String, enum: ["employee"], default: "employee" },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin", required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "admin" },
   },
   { timestamps: true }
 );
 
-export default mongoose.model("Employee", employeeSchema);
+const Employee = mongoose.model("employee", employeeSchema);
+
+export default Employee;

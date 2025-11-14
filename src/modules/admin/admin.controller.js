@@ -1,19 +1,12 @@
-import adminService from "./admin.service.js";
+import { adminService } from "./admin.service.js";
 import {
   adminSignupValidation,
   adminLoginValidationSchema,
 } from "../../validation/admin.validation.js";
 import { sendResponse } from "../../utils/response.js";
 
-/**
- * 🧩 ADMIN CONTROLLER
- * Handles signup and login requests
- */
-const adminController = {
-  /**
-   * @route POST /api/admin/signup
-   * @desc Create a new admin
-   */
+export const adminController = {
+ 
   adminSignup: async (req, res, next) => {
     try {
       const { error } = adminSignupValidation.validate(req.body);
@@ -29,10 +22,6 @@ const adminController = {
     }
   },
 
-  /**
-   * @route POST /api/admin/login
-   * @desc Admin login and get JWT token
-   */
   adminLogin: async (req, res, next) => {
     try {
       const { error } = adminLoginValidationSchema.validate(req.body);
@@ -52,5 +41,3 @@ const adminController = {
     }
   },
 };
-
-export default adminController;

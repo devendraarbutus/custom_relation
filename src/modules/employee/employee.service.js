@@ -1,86 +1,126 @@
-// src/modules/employee/employee.service.js
 import Employee from "../../models/employee.model.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import "dotenv/config";
 
-/**
- * Create a new employee
- * @param {Object} data - Employee data including name, email, and createdBy (admin ID)
- */
-export const createEmployee = async (data) => {
-  const { name, email, createdBy } = data;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-  if (!name || !email || !createdBy) {
-    const error = new Error("Name, email, and createdBy (admin) are required");
-    error.statusCode = 400;
-    throw error;
-  }
+export default {
+  createEmployeeService: async (data) => {
+    const { employeeName, email, mobile, password, createdBy } = data;
 
-  const existing = await Employee.findOne({ email });
-  if (existing) {
-    const error = new Error("Employee with this email already exists");
-    error.statusCode = 400;
-    throw error;
-  }
+    const existingEmployee = await Employee.findOne({ email }).select("+password");
+    if (existingEmployee) {
+      const error = new Error("Email already exists, please use another email");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  return Employee.create({ name, email, createdBy });
-};
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
 
-/**
- * Get all employees
- */
-export const getAllEmployees = async () => {
-  return Employee.find();
-};
+    const employee = new Employee({
+      employeeName,
+      email,
+      mobile,
+      password: hashedPassword,
+      createdBy,
+    });
 
-/**
- * Get employee by ID
- * @param {String} id - Employee ID
- */
-export const getEmployeeById = async (id) => {
-  const employee = await Employee.findById(id);
-  if (!employee) {
-    const error = new Error("Employee not found");
-    error.statusCode = 404;
-    throw error;
-  }
-  return employee;
-};
+    await employee.save();
 
-/**
- * Update employee
- * @param {String} id - Employee ID
- * @param {Object} data - Fields to update
- */
-export const updateEmployee = async (id, data) => {
-  const employee = await Employee.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
-  if (!employee) {
-    const error = new Error("Employee not found");
-    error.statusCode = 404;
-    throw error;
-  }
-  return employee;
-};
+    return {
+      id: employee._id,
+      employeeName: employee.employeeName,
+      email: employee.email,
+      mobile: employee.mobile,
+      role: employee.role,
+      status: employee.status,
+      createdBy: employee.createdBy,
+    };
+  },
 
-/**
- * Delete employee (only admin can delete)
- * @param {String} id - Employee ID
- * @param {String} requesterId - ID of the admin performing deletion
- */
-export const deleteEmployee = async (id, requesterId) => {
-  if (!requesterId) {
-    const error = new Error("Only admins can delete employees");
-    error.statusCode = 403;
-    throw error;
-  }
+  updateEmployeeService: async (id, data) => {
+    if (data.email) {
+      const existing = await Employee.findOne({ email: data.email, _id: { $ne: id } });
+      if (existing) {
+        const error = new Error("Email already exists, please use another email");
+        error.statusCode = 400;
+        throw error;
+      }
+    }
 
-  const employee = await Employee.findByIdAndDelete(id);
-  if (!employee) {
-    const error = new Error("Employee not found");
-    error.statusCode = 404;
-    throw error;
-  }
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password.trim(), 10);
+    }
 
-  return;
+    const employee = await Employee.findByIdAndUpdate(id, data, { new: true }).select("-password");
+    if (!employee) {
+      const error = new Error("Employee not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    return employee;
+  },
+
+  deleteEmployeeService: async (id) => {
+    const employee = await Employee.findByIdAndDelete(id);
+    if (!employee) {
+      const error = new Error("Employee not found");
+      error.statusCode = 404;
+      throw error;
+    }
+  },
+
+  getAllEmployeesService: async () => {
+    return await Employee.find().select("-password");
+  },
+
+  getEmployeeByIdService: async (id) => {
+    const employee = await Employee.findById(id).select("-password");
+    if (!employee) {
+      const error = new Error("Employee not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    return employee;
+  },
+
+  employeeLoginService: async (email, password) => {
+    const employee = await Employee.findOne({ email }).select("+password");
+    if (!employee) {
+      const error = new Error("Invalid email or password");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    if (!employee.password) {
+      const error = new Error("Employee has no password set");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const isMatch = await bcrypt.compare(password, employee.password);
+    if (!isMatch) {
+      const error = new Error("Invalid email or password");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const token = jwt.sign(
+      { id: employee._id, role: employee.role },
+      JWT_SECRET,
+      { expiresIn: "12h" }
+    );
+
+    return {
+      token,
+      employee: {
+        id: employee._id,
+        email: employee.email,
+        role: employee.role,
+        employeeName: employee.employeeName,
+      },
+    };
+  },
 };
