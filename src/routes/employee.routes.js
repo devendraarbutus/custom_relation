@@ -1,23 +1,39 @@
 import express from "express";
-import * as employeeController from "../modules/employee/employee.controller.js";
-import { adminAuthMiddleware } from "../middlewares/adminauth.middleware.js";
-import { verifyToken } from "../middlewares/auth.middleware.js";
+import {adminauthenticateJWT, adminVerification} from "../middlewares/adminauth.middleware.js";
+import employeeController from "../modules/employee/employee.controller.js";
 
-const router = express.Router();
+const employeeRouter = express.Router();
 
-// Create employee
-router.post("/", adminAuthMiddleware, employeeController.createEmployee);
+employeeRouter.post(
+    "/create",
+    adminauthenticateJWT, adminVerification,
+    employeeController.createEmployee
+);
 
-// Update employee
-router.put("/:id", adminAuthMiddleware, employeeController.updateEmployee);
+employeeRouter.post("/login",employeeController.employeeLogin);
 
-// Delete employee
-router.delete("/:id", adminAuthMiddleware, employeeController.deleteEmployee);
+employeeRouter.get(
+    "/getall",
+    adminauthenticateJWT, adminVerification,
+    employeeController.getEmployees
+);
 
-// Get all employees
-router.get("/", verifyToken, employeeController.getAllEmployees);
+employeeRouter.get(
+    "/get/:id",
+    adminauthenticateJWT, adminVerification,
+    employeeController.getEmployeeById
+);
 
-// Get employee by ID
-router.get("/:id", verifyToken, employeeController.getEmployeeById);
+employeeRouter.patch(
+    "/update/:id",
+    adminauthenticateJWT, adminVerification,
+    employeeController.updateEmployee
+);
 
-export default router;
+employeeRouter.delete(
+    "/delete/:id",
+    adminauthenticateJWT, adminVerification,
+    employeeController.deleteEmployee
+);
+
+export default employeeRouter;
