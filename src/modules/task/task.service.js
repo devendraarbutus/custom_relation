@@ -14,18 +14,18 @@ export const createTask = async (adminId, data, res) => {
       return res.status(400).json({ success: false, message: "Invalid or inactive employee" });
     }
 
-    const task = await Task.create({ 
-      title, 
-      description, 
-      assignedTo, 
-      createdBy: adminId, 
-      dueDate 
+    const task = await Task.create({
+      title,
+      description,
+      assignedTo,
+      createdBy: adminId,
+      dueDate
     });
 
-    return res.status(201).json({ 
-      success: true, 
-      message: "Task created successfully", 
-      task 
+    return res.status(201).json({
+      success: true,
+      message: "Task created successfully",
+      task
     });
   } catch (error) {
     return res.status(error.statusCode || 500)
@@ -73,10 +73,10 @@ export const getAllTasks = async (queryParams, res) => {
 
     return res.status(200).json({
       success: true,
+      tasks,
       page,
       limit,
       count: tasks.length,
-      tasks,
     });
 
   } catch (error) {
@@ -95,7 +95,7 @@ export const getTaskById = async (id, res) => {
       .populate("assignedTo", "name email")
       .populate("createdBy", "adminName email");
 
-    if (!task) 
+    if (!task)
       return res.status(404).json({ success: false, message: "Task not found" });
 
     return res.status(200).json({ success: true, task });
@@ -112,9 +112,9 @@ export const updateTaskStatus = async (id, status, res) => {
     const allowedStatus = ["pending", "in-progress", "completed", "overdue"];
 
     if (!status || !allowedStatus.includes(status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid status value" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value"
       });
     }
 
@@ -124,13 +124,13 @@ export const updateTaskStatus = async (id, status, res) => {
       { new: true }
     );
 
-    if (!task) 
+    if (!task)
       return res.status(404).json({ success: false, message: "Task not found" });
 
-    return res.status(200).json({ 
-      success: true, 
-      message: "Status updated", 
-      task 
+    return res.status(200).json({
+      success: true,
+      message: "Status updated",
+      task
     });
 
   } catch (error) {
@@ -143,14 +143,14 @@ export const updateTaskStatus = async (id, status, res) => {
 export const deleteTask = async (id, res) => {
   try {
     const task = await Task.findById(id);
-    if (!task) 
+    if (!task)
       return res.status(404).json({ success: false, message: "Task not found" });
 
     await task.deleteOne();
 
-    return res.status(200).json({ 
-      success: true, 
-      message: "Task deleted successfully" 
+    return res.status(200).json({
+      success: true,
+      message: "Task deleted successfully"
     });
 
   } catch (error) {

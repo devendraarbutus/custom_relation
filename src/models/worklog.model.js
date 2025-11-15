@@ -6,7 +6,7 @@ const WorkLogSchema = new Schema(
   {
     employeeId: {
       type: Schema.Types.ObjectId,
-      ref: "employee",
+      ref: "Employee",
       required: true,
       index: true
     },
@@ -18,28 +18,35 @@ const WorkLogSchema = new Schema(
       index: true
     },
 
+    // Array of work timers
     timer: [
       {
-        startTime: {
-          type: Date,
-          default: null
-        },
-        endTime: {
-          type: Date,
-          default: null
-        },
-        notes: {
-          type: String,
-          default: null
-        }
+        startTime: { type: Date, required: true },
+        endTime: { type: Date },
+        notes: { type: String, trim: true, default: "" }
       }
-    ]
+    ],
+
+    // Array of breaks
+    breaks: [
+      {
+        startTime: { type: Date, required: true },
+        endTime: { type: Date },
+        duration: { type: Number, default: 0 } // in milliseconds
+      }
+    ],
+
+    // Tracks when timer was last stopped for auto break calculation
+    lastStopTime: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true }
 );
 
-// Index to find active sessions
+// Compound index for faster queries
 WorkLogSchema.index({ employeeId: 1, taskId: 1 });
+WorkLogSchema.index({ employeeId: 1, updatedAt: -1 });
 
-const WorkLog = mongoose.model("WorkLog", WorkLogSchema);
-export default WorkLog;
+export default mongoose.model("WorkLog", WorkLogSchema);
