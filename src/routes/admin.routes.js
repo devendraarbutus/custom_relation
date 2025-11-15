@@ -6,7 +6,7 @@ const adminRouter = express.Router();
 adminRouter.post("/signup", adminController.adminSignup);
 adminRouter.post("/login", adminController.adminLogin);
 adminRouter.get("/list", adminauthenticateJWT, adminVerification, adminController.getAdmins);
-
+adminRouter.get("/report/:format", adminauthenticateJWT, adminVerification, adminController.sendEmployeeReport);
 
 export default adminRouter;
 

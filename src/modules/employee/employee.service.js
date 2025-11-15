@@ -1,6 +1,6 @@
 import Employee from "../../models/employee.model.js";
 import bcrypt from "bcrypt";
-import sendEmail from "../../utils/sendemail.js";
+import {sendEmail} from "../../utils/sendemail.js";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
 const JWT_SECRET = process.env.JWT_SECRET;
