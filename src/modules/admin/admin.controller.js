@@ -1,7 +1,7 @@
 import adminService from './admin.service.js';
 import { adminSignupValidation, adminLoginValidationSchema } from '../../validation/admin.validation.js';
 import { sendResponse } from '../../utils/response.js';
-
+import Admin from '../../models/admin.model.js';
 export default {
   adminSignup: async (req, res, next) => {
     try {
@@ -60,4 +60,21 @@ export default {
       next(err);
     }
   },
+  sendEmployeeReport: async (req, res, next) => {
+    try {
+      const adminId = req.admin.id;
+      const admin = await Admin.findById(adminId).select("email");
+      const format = req.params.format?.toLowerCase(); 
+
+      if (!format || !["pdf", "csv", "xls"].includes(format)) {
+        return next({ statusCode: 400, message: "Invalid format. Use pdf, csv, or xls" });
+      }
+
+      const result = await adminService.sendEmployeeReportService(admin.email, format);
+      sendResponse(res, 200, result.message);
+
+    } catch (err) {
+      next(err);
+    }
+  }
 }

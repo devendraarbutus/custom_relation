@@ -1,8 +1,16 @@
-export const sendResponse = (res, statusCode, message, data = {}) => {
-    return res.status(statusCode).json({
+export const sendResponse = (res, statusCode, message, data ) => {
+    const response = {
         success: true,
         statusCode,
         message,
-        result: data
-    });
+    };
+
+    // Agar data defined aur empty object/string/array nahi hai to hi add karo
+    if (data !== undefined && data !== null && 
+        !(typeof data === 'object' && Object.keys(data).length === 0) &&
+        !(Array.isArray(data) && data.length === 0)) {
+        response.result = data;
+    }
+
+    return res.status(statusCode).json(response);
 };
