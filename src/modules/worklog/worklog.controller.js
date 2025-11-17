@@ -1,14 +1,18 @@
 import workLogService from "./worklog.service.js";
 
-const asyncHandler = (fn) => (req, res) =>
-  Promise.resolve(fn(req, res)).catch((error) => {
+const asyncHandler = (fn) => async (req, res) => {
+  try {
+    await fn(req, res);
+  } catch (error) {
     console.error("WorkLog Error:", error);
     res.status(500).json({ success: false, error: error.message });
-  });
+  }
+};
 
-const sendResponse = (res, data) => res.status(200).json({ success: true, data });
+const sendResponse = (res, data) => {
+  res.status(200).json({ success: true, data });
+};
 
-// Start/Stop timer
 export const handleTimer = asyncHandler(async (req, res) => {
   const { employeeId, taskId, action, notes } = req.body;
 
@@ -19,8 +23,11 @@ export const handleTimer = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!["start", "stop"].includes(action)) {
-    return res.status(400).json({ success: false, message: "Invalid action" });
+  if (action !== "start" && action !== "stop") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid action",
+    });
   }
 
   const result =
@@ -28,22 +35,19 @@ export const handleTimer = asyncHandler(async (req, res) => {
       ? await workLogService.startTimer(employeeId, taskId)
       : await workLogService.stopTimer(employeeId, taskId, notes || "");
 
-  res.status(result.success ? 200 : 400).json(result);
+  return res.status(result.success ? 200 : 400).json(result);
 });
 
-// Employee logs
 export const getLogsByEmployee = asyncHandler(async (req, res) => {
   const logs = await workLogService.getEmployeeLogs(req.params.employeeId);
   sendResponse(res, logs);
 });
 
-// Task logs
 export const getLogsByTask = asyncHandler(async (req, res) => {
   const logs = await workLogService.getTaskLogs(req.params.taskId);
   sendResponse(res, logs);
 });
 
-// Summary endpoints (service already handles formatting)
 export const getTodaySummary = asyncHandler(async (req, res) => {
   const summary = await workLogService.getTodaySummary(req.params.employeeId);
   sendResponse(res, summary);
@@ -59,13 +63,11 @@ export const getMonthlySummary = asyncHandler(async (req, res) => {
   sendResponse(res, summary);
 });
 
-// Task-specific summary
 export const getTaskSummary = asyncHandler(async (req, res) => {
   const summary = await workLogService.getTaskSummary(req.params.taskId);
   sendResponse(res, summary);
 });
 
-// Get all logs (admin)
 export const getAllLogs = asyncHandler(async (req, res) => {
   const logs = await workLogService.getAllLogs();
   sendResponse(res, logs);
