@@ -23,10 +23,10 @@ export const handleTimer = asyncHandler(async (req, res) => {
     });
   }
 
-  if (action !== "start" && action !== "stop") {
+  if (!["start", "stop"].includes(action)) {
     return res.status(400).json({
       success: false,
-      message: "Invalid action",
+      message: "Invalid action. Must be 'start' or 'stop'",
     });
   }
 
