@@ -2,6 +2,9 @@ import WorkLog from "../../models/worklog.model.js";
 import Task from "../../models/task.model.js";
 import Employee from "../../models/employee.model.js";
 
+// -----------------------------
+// UTILITIES
+// -----------------------------
 const formatDuration = (ms) => {
   if (!ms || ms <= 0) return "0 min";
   const m = Math.floor(ms / 60000);
@@ -26,33 +29,42 @@ const calculateDurations = (log) => {
   let totalWork = 0;
   let totalBreak = 0;
 
-  log?.timer?.forEach((t) => {
-    if (t.startTime && t.endTime) {
+  for (const t of log.timer || []) {
+    if (t.startTime && t.endTime)
       totalWork += new Date(t.endTime) - new Date(t.startTime);
-    }
-  });
+  }
 
-  log?.breaks?.forEach((b) => {
+  for (const b of log.breaks || []) {
     if (b.startTime && b.endTime) {
       const clean = capBreakToSameDay(b);
       totalBreak += new Date(clean.endTime) - new Date(clean.startTime);
     }
-  });
+  }
 
   return { totalWork, totalBreak };
 };
 
+// -----------------------------
+// TIMER HANDLERS
+// -----------------------------
 const startTimer = async (employeeId, taskId) => {
   let log = await WorkLog.findOne({ employeeId, taskId });
 
   if (!log)
-    log = new WorkLog({ employeeId, taskId, timer: [], breaks: [] });
+    log = new WorkLog({
+      employeeId,
+      taskId,
+      timer: [],
+      breaks: [],
+      lastStopTime: null,
+    });
 
   if (log.timer.some((t) => !t.endTime))
     return { success: false, message: "Timer already running" };
 
   const now = new Date();
 
+  // Convert previous stopTime → break
   if (log.lastStopTime instanceof Date) {
     log.breaks.push({ startTime: log.lastStopTime, endTime: now });
     log.lastStopTime = null;
@@ -76,9 +88,8 @@ const stopTimer = async (employeeId, taskId, notes = "") => {
 
   if (notes.trim()) running.notes = notes.trim();
 
-  if (log.lastStopTime instanceof Date) {
+  if (log.lastStopTime instanceof Date)
     log.breaks.push({ startTime: log.lastStopTime, endTime: now });
-  }
 
   log.lastStopTime = now;
 
@@ -86,11 +97,9 @@ const stopTimer = async (employeeId, taskId, notes = "") => {
   return { success: true, message: "Work timer stopped" };
 };
 
-const addNotes = async () => ({
-  success: false,
-  message: "Notes can only be added when stopping the timer.",
-});
-
+// -----------------------------
+// TASK WISE DETAILS
+// -----------------------------
 const getTaskWiseDetails = async (logs) => {
   const map = {};
 
@@ -98,7 +107,7 @@ const getTaskWiseDetails = async (logs) => {
     const task = log.taskId;
     if (!task) continue;
 
-    const id = task._id.toString();
+    const id = String(task._id);
 
     if (!map[id]) {
       map[id] = {
@@ -130,19 +139,25 @@ const getTaskWiseDetails = async (logs) => {
   return Object.values(map);
 };
 
+// -----------------------------
+// EMPLOYEE TASK SUMMARY
+// -----------------------------
 const getEmployeeTaskSummary = async (employeeId, filter = {}) => {
   const logs = await WorkLog.find({ employeeId, ...filter })
     .populate({
+      path: "employeeId",
+      model: "employee",
+      select: "_id employeeName email",
+    })
+    .populate({
       path: "taskId",
+      model: "Task",
       select: "title description createdBy",
-      populate: { path: "createdBy", select: "adminName email" },
+      populate: { path: "createdBy", select: "_id adminName email" },
     })
     .lean();
 
-  const employee = await Employee.findById(employeeId)
-    .select("employeeName email")
-    .lean();
-
+  const employee = logs.length ? logs[0].employeeId : null;
   const tasks = await getTaskWiseDetails(logs);
 
   const totalWork = tasks.reduce((s, t) => s + t.totalWork, 0);
@@ -168,10 +183,23 @@ const getEmployeeTaskSummary = async (employeeId, filter = {}) => {
   };
 };
 
+// -----------------------------
+// FIXED DATE FILTERS (correct filtering)
+// -----------------------------
+const buildDateFilter = (start) => ({
+  $or: [
+    { "timer.startTime": { $gte: start } },
+    { "timer.endTime": { $gte: start } },
+    { "breaks.startTime": { $gte: start } },
+    { "breaks.endTime": { $gte: start } },
+  ],
+});
+
 const getTodaySummary = (employeeId) => {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
-  return getEmployeeTaskSummary(employeeId, { updatedAt: { $gte: start } });
+
+  return getEmployeeTaskSummary(employeeId, buildDateFilter(start));
 };
 
 const getWeeklySummary = (employeeId) => {
@@ -179,27 +207,31 @@ const getWeeklySummary = (employeeId) => {
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0, 0, 0, 0);
-  return getEmployeeTaskSummary(employeeId, { updatedAt: { $gte: weekStart } });
+
+  return getEmployeeTaskSummary(employeeId, buildDateFilter(weekStart));
 };
 
 const getMonthlySummary = (employeeId) => {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  return getEmployeeTaskSummary(employeeId, { updatedAt: { $gte: monthStart } });
+
+  return getEmployeeTaskSummary(employeeId, buildDateFilter(monthStart));
 };
 
+// -----------------------------
+// TASK SUMMARY
+// -----------------------------
 const getTaskSummary = async (taskId) => {
   const logs = await WorkLog.find({ taskId })
+    .populate("employeeId", "_id employeeName email")
     .populate({
       path: "taskId",
       select: "title description createdBy",
-      populate: { path: "createdBy", select: "adminName email" },
+      populate: { path: "createdBy", select: "_id adminName email" },
     })
-    .populate("employeeId", "employeeName email")
     .lean();
 
-  if (!logs.length)
-    return { success: false, message: "No logs for this task" };
+  if (!logs.length) return { success: false, message: "No logs for this task" };
 
   const tasks = await getTaskWiseDetails(logs);
 
@@ -218,21 +250,25 @@ const getTaskSummary = async (taskId) => {
   };
 };
 
-const getEmployeeLogs = async (employeeId) =>
-  await WorkLog.find({ employeeId }).sort({ updatedAt: -1 });
+// -----------------------------
+// BASIC LOG GETTERS
+// -----------------------------
+const getEmployeeLogs = (employeeId) =>
+  WorkLog.find({ employeeId }).sort({ updatedAt: -1 });
 
-const getTaskLogs = async (taskId) =>
-  await WorkLog.find({ taskId }).sort({ updatedAt: -1 });
+const getTaskLogs = (taskId) =>
+  WorkLog.find({ taskId }).sort({ updatedAt: -1 });
 
-const getAllLogs = async () =>
-  await WorkLog.find()
-    .populate("taskId employeeId")
-    .sort({ updatedAt: -1 });
+const getAllLogs = () =>
+  WorkLog.find().populate("taskId employeeId").sort({ updatedAt: -1 });
 
 export default {
   startTimer,
   stopTimer,
-  addNotes,
+  addNotes: async () => ({
+    success: false,
+    message: "Notes can only be added when stopping the timer.",
+  }),
   getEmployeeLogs,
   getTaskLogs,
   getAllLogs,
