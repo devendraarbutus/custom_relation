@@ -13,9 +13,11 @@ const sendResponse = (res, data) => {
   res.status(200).json({ success: true, data });
 };
 
+// ---------------------- TIMER HANDLER ------------------------
 export const handleTimer = asyncHandler(async (req, res) => {
   const { employeeId, taskId, action, notes } = req.body;
 
+  // Validation
   if (!employeeId || !taskId || !action) {
     return res.status(400).json({
       success: false,
@@ -30,14 +32,25 @@ export const handleTimer = asyncHandler(async (req, res) => {
     });
   }
 
-  const result =
-    action === "start"
-      ? await workLogService.startTimer(employeeId, taskId)
-      : await workLogService.stopTimer(employeeId, taskId, notes || "");
+  let result;
+
+  if (action === "start") {
+
+    //  Auto stop any running timer before starting another
+    await workLogService.autoStopPreviousTimer(employeeId);
+
+    // Start new timer
+    result = await workLogService.startTimer(employeeId, taskId);
+
+  } else {
+    // Stop current timer
+    result = await workLogService.stopTimer(employeeId, taskId, notes || "");
+  }
 
   return res.status(result.success ? 200 : 400).json(result);
 });
 
+// ---------------------- FETCH LOGS ---------------------------
 export const getLogsByEmployee = asyncHandler(async (req, res) => {
   const logs = await workLogService.getEmployeeLogs(req.params.employeeId);
   sendResponse(res, logs);
@@ -48,6 +61,7 @@ export const getLogsByTask = asyncHandler(async (req, res) => {
   sendResponse(res, logs);
 });
 
+// ---------------------- SUMMARY ROUTES -----------------------
 export const getTodaySummary = asyncHandler(async (req, res) => {
   const summary = await workLogService.getTodaySummary(req.params.employeeId);
   sendResponse(res, summary);
@@ -68,11 +82,13 @@ export const getTaskSummary = asyncHandler(async (req, res) => {
   sendResponse(res, summary);
 });
 
+// ---------------------- ALL LOGS -----------------------------
 export const getAllLogs = asyncHandler(async (req, res) => {
   const logs = await workLogService.getAllLogs();
   sendResponse(res, logs);
 });
 
+// ---------------------- DEFAULT EXPORT -----------------------
 export default {
   handleTimer,
   getLogsByEmployee,
