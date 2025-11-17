@@ -6,7 +6,7 @@ const WorkLogSchema = new Schema(
   {
     employeeId: {
       type: Schema.Types.ObjectId,
-      ref: "Employee",
+      ref: "employee",   
       required: true,
       index: true
     },
@@ -22,7 +22,7 @@ const WorkLogSchema = new Schema(
     timer: [
       {
         startTime: { type: Date, required: true },
-        endTime: { type: Date },
+        endTime: { type: Date, default: null },   // safer default
         notes: { type: String, trim: true, default: "" }
       }
     ],
@@ -31,8 +31,8 @@ const WorkLogSchema = new Schema(
     breaks: [
       {
         startTime: { type: Date, required: true },
-        endTime: { type: Date },
-        duration: { type: Number, default: 0 } // in milliseconds
+        endTime: { type: Date, default: null },   // safer default
+        duration: { type: Number, default: 0 }    // stored in ms
       }
     ],
 
@@ -45,7 +45,7 @@ const WorkLogSchema = new Schema(
   { timestamps: true }
 );
 
-// Compound index for faster queries
+// Compound indexes
 WorkLogSchema.index({ employeeId: 1, taskId: 1 });
 WorkLogSchema.index({ employeeId: 1, updatedAt: -1 });
 
